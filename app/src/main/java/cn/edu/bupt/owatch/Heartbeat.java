@@ -1,37 +1,52 @@
 package cn.edu.bupt.owatch;
 
-import java.util.Locale;
+import android.util.Log;
+
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.util.Timer;
+import java.util.TimerTask;
 
 class Heartbeat {
 
-    private byte[] message;
+    private Timer timer;
+    private DatagramSocket socket;
+    private DatagramPacket packet;
 
-    private Heartbeat() {}
-
-    Heartbeat(int ip) {
-        byte[] ipBytes = String.format(Locale.getDefault(), "%d.%d.%d.%d",
-                ip & 0xff, ip >> 8 & 0xff, ip >> 16 & 0xff, ip >> 24 & 0xff).getBytes();
-        this.message = new byte[ipBytes.length + 8];
-        System.arraycopy(ipBytes, 0, message, 0, ipBytes.length);
+    Heartbeat() {
+        timer = new Timer();
     }
 
-    /** 获取心跳包的bytes */
-    byte[] getMessage() {
-        long timestamp = System.currentTimeMillis();
-
-        for (int i = message.length - 1; i >= message.length - 8; i--) {
-            message[i] = (byte)(timestamp & 0x00000000000000FFL);
-            timestamp >>= 8;
+    void start(String serverIP, int serverPort) {
+        try {
+            InetAddress serverAddress = InetAddress.getByName(serverIP);
+            socket = new DatagramSocket();
+            packet = new DatagramPacket(new byte[1], 1, serverAddress, serverPort);
+        } catch (IOException e) {
+            Log.e("HEARTBEAT", e.toString());
         }
-        return message;
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    socket.send(packet);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, 0, 1000);
     }
 
-    String getString() {
-        byte[] message = getMessage();
-        StringBuilder sb = new StringBuilder();
-        for (byte b : message) {
-            sb.append(String.format(Locale.getDefault(), "%02x", b));
+    void stop() {
+        if (timer != null) {
+            timer.cancel();
+            timer = null;
         }
-        return sb.toString();
+        if (socket != null) {
+            socket.close();
+            socket = null;
+        }
     }
 }

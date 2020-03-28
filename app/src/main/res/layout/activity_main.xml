@@ -1,46 +1,127 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/colorPrimary"
-    android:keepScreenOn="true"
-    android:orientation="vertical"
-    tools:context=".MainActivity">
+    android:background="@color/colorPrimary">
 
-    <FrameLayout
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="240dp">
+        android:layout_height="match_parent"
+        android:layout_marginTop="100dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:gravity="center_horizontal">
 
-        <org.videolan.libvlc.util.VLCVideoLayout
-            android:id="@+id/video_layout"
+        <FrameLayout
+            android:id="@+id/server_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:gravity="center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:textSize="16sp"
+                android:text="服务器" />
+
+            <EditText
+                android:id="@+id/server_input"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginStart="80dp"
+                android:textSize="16sp" />
+
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/port_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fitsSystemWindows="false" />
-    </FrameLayout>
-
-    <TableLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:stretchColumns="*">
-
-        <TableRow
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
-            <TextView
-                android:id="@+id/wifi_state"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:layout_margin="16dp" />
+            android:layout_below="@+id/server_layout">
 
             <TextView
-                android:id="@+id/ip_info"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:layout_margin="16dp" />
-        </TableRow>
-    </TableLayout>
-</LinearLayout>
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:gravity="center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:textSize="16sp"
+                android:text="端口" />
 
+            <EditText
+                android:id="@+id/port_input"
+                android:layout_width="match_parent"
+                android:inputType="number"
+                android:layout_height="48dp"
+                android:layout_marginStart="80dp"
+                android:textSize="16sp" />
 
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/username_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/port_layout">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:gravity="center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:textSize="16sp"
+                android:text="用户名" />
+
+            <EditText
+                android:id="@+id/username_input"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginStart="80dp"
+                android:textSize="16sp" />
+
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/password_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/username_layout">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:gravity="center_vertical"
+                android:textSize="16sp"
+                android:text="密码" />
+
+            <EditText
+                android:id="@+id/password_input"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginStart="80dp"
+                android:inputType="textPassword"
+                android:textSize="16sp" />
+
+        </FrameLayout>
+
+        <Button
+            android:id="@+id/login_button"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@color/colorAccent"
+            android:layout_below="@id/password_layout"
+            android:layout_marginTop="36dp"
+            android:gravity="center"
+            android:layout_marginStart="120dp"
+            android:layout_marginEnd="120dp"
+            android:text="登录"
+            android:textColor="@android:color/white" />
+
+    </RelativeLayout>
+
+</RelativeLayout>
