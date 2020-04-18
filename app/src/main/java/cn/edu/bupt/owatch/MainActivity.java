@@ -1,15 +1,18 @@
 package cn.edu.bupt.owatch;
 
+import android.content.Intent;
 import android.os.Bundle;
-import android.os.Looper;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.View;
-import android.widget.BaseAdapter;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.gson.Gson;
@@ -17,6 +20,7 @@ import com.google.gson.Gson;
 import java.util.ArrayList;
 
 import cn.edu.bupt.owatch.adapter.InfoAdapter;
+import cn.edu.bupt.owatch.bean.DataHolder;
 import cn.edu.bupt.owatch.bean.ServerInfo;
 import cn.edu.bupt.owatch.bean.WsResponse;
 import okhttp3.OkHttpClient;
@@ -31,7 +35,52 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private OkHttpClient client;
     private ArrayList<ServerInfo> serverInfoList = new ArrayList<>();
     private InfoAdapter adapter;
-    private ListView infoListView;
+    private Handler uiHandler = new Handler(new UIHandler());
+    private DataHolder dataHolder;
+
+    class UIHandler implements Handler.Callback, AdapterView.OnItemClickListener {
+        @Override
+        public boolean handleMessage(@NonNull Message msg) {
+            switch (msg.what) {
+                case 0:
+                    Toast.makeText(MainActivity.this, "服务器地址错误", Toast.LENGTH_LONG).show();
+                    break;
+                case 1:
+                    Toast.makeText(MainActivity.this, "用户名或密码错误", Toast.LENGTH_LONG).show();
+                    break;
+                case 2:
+                    Toast.makeText(MainActivity.this, "连接断开", Toast.LENGTH_LONG).show();
+                    break;
+                case 3:
+                    Toast.makeText(MainActivity.this, "连接超时", Toast.LENGTH_LONG).show();
+                    break;
+                case 4:
+                    setContentView(R.layout.activity_info);
+                    ListView infoListView = findViewById(R.id.info_list);
+                    adapter = new InfoAdapter(MainActivity.this, serverInfoList);
+                    infoListView.setAdapter(adapter);
+                    infoListView.setOnItemClickListener(this);
+                    break;
+                case 5:
+                    adapter.refresh(serverInfoList);
+                    adapter.notifyDataSetChanged();
+                    break;
+                case 6:
+                    Toast.makeText(MainActivity.this, "请求错误", Toast.LENGTH_LONG).show();
+                    break;
+            }
+            return false;
+        }
+
+        @Override
+        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+            Log.i("onClick", "position=" + position);
+            ServerInfo info = serverInfoList.get(position);
+            Intent intent = new Intent(getApplicationContext(), PlayActivity.class);
+            dataHolder.setInfo(info);
+            startActivity(intent);
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,6 +91,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         loginBtn.setOnClickListener(this);
 
         client = new OkHttpClient.Builder().build();
+        dataHolder = (DataHolder)getApplication();
     }
 
     @Override
@@ -88,15 +138,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 public void onOpen(WebSocket webSocket, Response response) {
                     super.onOpen(webSocket, response);
                     Log.i("ws", "on open");
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            setContentView(R.layout.activity_info);
-                            infoListView = findViewById(R.id.info_list);
-                            adapter = new InfoAdapter(MainActivity.this, serverInfoList);
-                            infoListView.setAdapter(adapter);
-                        }
-                    });
+                    uiHandler.sendEmptyMessage(4);
                 }
 
                 @Override
@@ -104,9 +146,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     super.onMessage(webSocket, text);
                     Log.i("ws", "on message:" + text);
                     WsResponse resp = gson.fromJson(text, WsResponse.class);
-                    serverInfoList = resp.getServerInfoList();
-                    adapter.refresh(serverInfoList);
-                    adapter.notifyDataSetChanged();
+                    Log.i("ws", "message=" + resp.getMessage());
+                    if (resp.getMessage().equals("info")) {
+                        serverInfoList = resp.getServerInfoList();
+                        uiHandler.sendEmptyMessage(5);
+                    } else if (resp.getCode() != 0) {
+                        uiHandler.sendEmptyMessage(6);
+                    }
                 }
 
                 @Override
@@ -114,28 +160,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     super.onFailure(webSocket, t, response);
                     if (t instanceof java.net.ConnectException) {
                         Log.e("ws", "addr error");
-                        showToastInThread("服务器地址错误");
+                        uiHandler.sendEmptyMessage(0);
                     } else if (t instanceof java.net.ProtocolException) {
                         Log.e("ws", "password error");
-                        showToastInThread("用户名或密码错误");
+                        uiHandler.sendEmptyMessage(1);
                     } else if (t instanceof java.io.EOFException) {
                         Log.e("ws", "connection closed");
-                        showToastInThread("连接断开");
+                        uiHandler.sendEmptyMessage(2);
                     } else if (t instanceof java.net.SocketTimeoutException) {
                         Log.e("ws", "timeout");
-                        showToastInThread("连接超时");
+                        uiHandler.sendEmptyMessage(3);
                     }
                     Log.i("ws", "on failure:" + t.getLocalizedMessage() + "type: " + t.getClass().getName());
                 }
             });
-            setContentView(R.layout.activity_info);
+            dataHolder.setWs(ws);
         }
-    }
-
-    private void showToastInThread(String text) {
-        Looper.prepare();
-        Toast.makeText(MainActivity.this, text, Toast.LENGTH_LONG).show();
-        Looper.loop();
     }
 
     private void showToast(String text) {

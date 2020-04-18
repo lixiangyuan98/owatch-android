@@ -1,7 +1,6 @@
 package cn.edu.bupt.owatch.adapter;
 
 import android.content.Context;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,6 +17,11 @@ public class InfoAdapter extends BaseAdapter {
     private List<ServerInfo> serverInfoList;
     private Context context;
 
+    class ViewHolder {
+        TextView hostView;
+        TextView statusView;
+    }
+
     public InfoAdapter(Context context, List<ServerInfo> serverInfoList) {
         this.serverInfoList = serverInfoList;
         this.context = context;
@@ -25,9 +29,6 @@ public class InfoAdapter extends BaseAdapter {
 
     public void refresh(List<ServerInfo> serverInfoList) {
         this.serverInfoList = serverInfoList;
-        for (int i = 0; i < serverInfoList.size(); i++) {
-            Log.i("adapter", "host=" + serverInfoList.get(i).getHost() + "status=" + serverInfoList.get(i).getStatus());
-        }
     }
 
     @Override
@@ -64,9 +65,4 @@ public class InfoAdapter extends BaseAdapter {
     public long getItemId(int position) {
         return position;
     }
-}
-
-class ViewHolder {
-    TextView hostView;
-    TextView statusView;
 }

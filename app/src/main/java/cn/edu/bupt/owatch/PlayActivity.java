@@ -2,13 +2,16 @@ package cn.edu.bupt.owatch;
 
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.TextView;
+import android.widget.AdapterView;
+import android.widget.ListView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.gson.Gson;
 
 import org.videolan.libvlc.LibVLC;
 import org.videolan.libvlc.Media;
@@ -19,24 +22,31 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Locale;
 
-public class PlayActivity extends AppCompatActivity implements OnClickListener {
+import cn.edu.bupt.owatch.adapter.FileAdapter;
+import cn.edu.bupt.owatch.bean.DataHolder;
+import cn.edu.bupt.owatch.bean.WsRequest;
+
+public class PlayActivity extends AppCompatActivity implements OnClickListener, AdapterView.OnItemClickListener {
     private static final boolean USE_TEXTURE_VIEW = false;
     private static final boolean ENABLE_SUBTITLES = true;
     private static final String ASSET_FILENAME = "play.sdp";
+    private Gson gson;
 
     private VLCVideoLayout mVideoLayout = null;
+    private Integer addr;
+    private ListView fileList;
 
     private LibVLC mLibVLC = null;
     private MediaPlayer mMediaPlayer = null;
-    private Heartbeat mHeartbeat = null;
-    private EditText mServerIP = null;
-    private EditText mServerPort = null;
+    private DataHolder dataHolder = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_play);
+        dataHolder = (DataHolder) getApplication();
+        gson = new Gson();
 
         final ArrayList<String> args = new ArrayList<>();
         args.add("-vvv");
@@ -45,14 +55,17 @@ public class PlayActivity extends AppCompatActivity implements OnClickListener {
 
         mVideoLayout = findViewById(R.id.video_layout);
 
-        mServerIP = findViewById(R.id.serverIP);
-        mServerPort = findViewById(R.id.serverPort);
-        Button confirmBtn = findViewById(R.id.confirmBtn);
-        Button resetBtn = findViewById(R.id.resetBtn);
-        confirmBtn.setOnClickListener(this);
-        resetBtn.setOnClickListener(this);
-
-        mHeartbeat = new Heartbeat();
+//        mServerIP = findViewById(R.id.serverIP);
+//        mServerPort = findViewById(R.id.serverPort);
+//        Button confirmBtn = findViewById(R.id.confirmBtn);
+//        Button resetBtn = findViewById(R.id.resetBtn);
+//        confirmBtn.setOnClickListener(this);
+//        resetBtn.setOnClickListener(this);
+        fileList = findViewById(R.id.file_list);
+        FileAdapter adapter = new FileAdapter(PlayActivity.this, dataHolder.getInfo().getFiles());
+        Log.i("PLAY", "files: " + dataHolder.getInfo().getFiles().size());
+        fileList.setAdapter(adapter);
+        fileList.setOnItemClickListener(this);
     }
 
     @Override
@@ -64,19 +77,11 @@ public class PlayActivity extends AppCompatActivity implements OnClickListener {
     @Override
     protected void onResume() {
         super.onResume();
-
-        TextView ipInfo = findViewById(R.id.ip_info);
-        TextView wifiState = findViewById(R.id.wifi_state);
-
-        WifiManager wm = (WifiManager)getSystemService(WIFI_SERVICE);
-        boolean wifiEnabled = false;
-        int addr = 0;
+        WifiManager wm = (WifiManager) getSystemService(WIFI_SERVICE);
+        addr = 0;
         if (wm != null) {
-            wifiEnabled = wm.isWifiEnabled();
             addr = wm.getConnectionInfo().getIpAddress();
         }
-        wifiState.setText(wifiEnabled ? getString(R.string.wifi_enabled) : getString(R.string.wifi_disabled));
-        ipInfo.setText(getString(R.string.ip_info, itoa(addr)));
     }
 
     @Override
@@ -91,32 +96,55 @@ public class PlayActivity extends AppCompatActivity implements OnClickListener {
         mMediaPlayer.stop();
         mMediaPlayer.release();
         mLibVLC.release();
-        mHeartbeat.stop();
     }
 
     @Override
     public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.confirmBtn:
-                if (mMediaPlayer.isPlaying()) {
-                    mMediaPlayer.stop();
-                } else {
-                    mHeartbeat.start(mServerIP.getText().toString(), Integer.parseInt(mServerPort.getText().toString()));
-                }
-                try {
-                    final Media media = new Media(mLibVLC, getAssets().openFd(ASSET_FILENAME));
-                    mMediaPlayer.setMedia(media);
-                    media.release();
-                    mMediaPlayer.play();
-                } catch (IOException ignored) {}
-                break;
-            case R.id.resetBtn:
-                mHeartbeat.stop();
-                mHeartbeat = new Heartbeat();
-                mMediaPlayer.stop();
-                mServerIP.setText(getString(R.string.default_server_ip));
-                mServerPort.setText(getString(R.string.default_server_port));
-                break;
+//        switch (v.getId()) {
+//            case R.id.confirmBtn:
+//                if (mMediaPlayer.isPlaying()) {
+//                    mMediaPlayer.stop();
+//                } else {
+//                    mHeartbeat.start(mServerIP.getText().toString(), Integer.parseInt(mServerPort.getText().toString()));
+//                }
+//                try {
+//                    final Media media = new Media(mLibVLC, getAssets().openFd(ASSET_FILENAME));
+//                    mMediaPlayer.setMedia(media);
+//                    media.release();
+//                    mMediaPlayer.play();
+//                } catch (IOException ignored) {}
+//                break;
+//            case R.id.resetBtn:
+//                mHeartbeat.stop();
+//                mHeartbeat = new Heartbeat();
+//                mMediaPlayer.stop();
+//                mServerIP.setText(getString(R.string.default_server_ip));
+//                mServerPort.setText(getString(R.string.default_server_port));
+//                break;
+//        }
+    }
+
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        Log.i("FileList", "click file " + position);
+        if (mMediaPlayer.isPlaying()) {
+            mMediaPlayer.stop();
+        }
+        String src = null;
+        if (position != 0) {
+            src = dataHolder.getInfo().getFiles().get(position - 1);
+        }
+        WsRequest req = new WsRequest("SEND", dataHolder.getInfo().getHost(), src, itoa(addr), 9000);
+        dataHolder.getWs().send(gson.toJson(req));
+        Log.i("PLAY", "send request: " + gson.toJson(req));
+        try {
+            final Media media = new Media(mLibVLC, getAssets().openFd(ASSET_FILENAME));
+            mMediaPlayer.setMedia(media);
+            media.release();
+            mMediaPlayer.play();
+        } catch (IOException e) {
+            Log.e("PLAY", "play error: " + e.getMessage());
+            Toast.makeText(PlayActivity.this, "播放失败", Toast.LENGTH_LONG).show();
         }
     }
 
