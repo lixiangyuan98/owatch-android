@@ -18,6 +18,7 @@ public class InfoAdapter extends BaseAdapter {
     private Context context;
 
     class ViewHolder {
+        TextView nameView;
         TextView hostView;
         TextView statusView;
     }
@@ -39,6 +40,7 @@ public class InfoAdapter extends BaseAdapter {
             LayoutInflater inflater = LayoutInflater.from(context);
             convertView = inflater.inflate(R.layout.info_list, null);
 
+            holder.nameView = convertView.findViewById(R.id.remote_info_name);
             holder.hostView = convertView.findViewById(R.id.remote_info_host);
             holder.statusView = convertView.findViewById(R.id.remote_info_status);
             convertView.setTag(holder);
@@ -46,6 +48,7 @@ public class InfoAdapter extends BaseAdapter {
             holder = (ViewHolder)convertView.getTag();
         }
 
+        holder.nameView.setText(serverInfoList.get(position).getName());
         holder.hostView.setText(serverInfoList.get(position).getHost());
         holder.statusView.setText(serverInfoList.get(position).getStatus());
         return convertView;
