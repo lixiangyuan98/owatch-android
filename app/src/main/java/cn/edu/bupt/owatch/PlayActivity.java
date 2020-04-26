@@ -1,14 +1,19 @@
 package cn.edu.bupt.owatch;
 
+import android.net.TrafficStats;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.gson.Gson;
@@ -33,12 +38,17 @@ public class PlayActivity extends AppCompatActivity implements OnClickListener, 
     private Gson gson;
 
     private VLCVideoLayout mVideoLayout = null;
+    private TextView speedText;
     private Integer addr;
     private ListView fileList;
 
     private LibVLC mLibVLC = null;
     private MediaPlayer mMediaPlayer = null;
     private DataHolder dataHolder = null;
+
+    private Handler speedHandler;
+    private Runnable speedCountRunnable;
+    private long totalRxBytes = TrafficStats.getTotalRxBytes();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,13 +64,34 @@ public class PlayActivity extends AppCompatActivity implements OnClickListener, 
         mMediaPlayer = new MediaPlayer(mLibVLC);
 
         mVideoLayout = findViewById(R.id.video_layout);
+        speedText = findViewById(R.id.speedText);
 
-//        mServerIP = findViewById(R.id.serverIP);
-//        mServerPort = findViewById(R.id.serverPort);
-//        Button confirmBtn = findViewById(R.id.confirmBtn);
-//        Button resetBtn = findViewById(R.id.resetBtn);
-//        confirmBtn.setOnClickListener(this);
-//        resetBtn.setOnClickListener(this);
+        speedHandler = new Handler() {
+            @Override
+            public void handleMessage(@NonNull Message msg) {
+                super.handleMessage(msg);
+                if (msg.what == 1) {
+                    Log.i("PLAY", "Speed=" + msg.arg1 / 1024 + "KB/s");
+                    speedText.setText(msg.arg1 / 1024 + "KB/s");
+                }
+            }
+        };
+
+        speedCountRunnable = new Runnable() {
+            @Override
+            public void run() {
+                long total = TrafficStats.getTotalRxBytes();
+                speedHandler.postDelayed(speedCountRunnable, 1000);
+                Message msg =  speedHandler.obtainMessage();
+                msg.what = 1;
+                msg.arg1 = (int)(total - totalRxBytes);
+                totalRxBytes = total;
+                speedHandler.sendMessage(msg);
+            }
+        };
+
+        speedHandler.postDelayed(speedCountRunnable, 0);
+
         fileList = findViewById(R.id.file_list);
         FileAdapter adapter = new FileAdapter(PlayActivity.this, dataHolder.getInfo().getFiles());
         Log.i("PLAY", "files: " + dataHolder.getInfo().getFiles().size());
@@ -96,6 +127,7 @@ public class PlayActivity extends AppCompatActivity implements OnClickListener, 
         mMediaPlayer.stop();
         mMediaPlayer.release();
         mLibVLC.release();
+        speedHandler.removeCallbacks(speedCountRunnable);
     }
 
     @Override
