@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -97,6 +98,11 @@ public class PlayActivity extends AppCompatActivity implements OnClickListener, 
         Log.i("PLAY", "files: " + dataHolder.getInfo().getFiles().size());
         fileList.setAdapter(adapter);
         fileList.setOnItemClickListener(this);
+
+        Button realtimeVideoBtn = findViewById(R.id.realtime_video);
+        Button stopVideoBtn = findViewById(R.id.stop_video);
+        realtimeVideoBtn.setOnClickListener(this);
+        stopVideoBtn.setOnClickListener(this);
     }
 
     @Override
@@ -130,43 +136,7 @@ public class PlayActivity extends AppCompatActivity implements OnClickListener, 
         speedHandler.removeCallbacks(speedCountRunnable);
     }
 
-    @Override
-    public void onClick(View v) {
-//        switch (v.getId()) {
-//            case R.id.confirmBtn:
-//                if (mMediaPlayer.isPlaying()) {
-//                    mMediaPlayer.stop();
-//                } else {
-//                    mHeartbeat.start(mServerIP.getText().toString(), Integer.parseInt(mServerPort.getText().toString()));
-//                }
-//                try {
-//                    final Media media = new Media(mLibVLC, getAssets().openFd(ASSET_FILENAME));
-//                    mMediaPlayer.setMedia(media);
-//                    media.release();
-//                    mMediaPlayer.play();
-//                } catch (IOException ignored) {}
-//                break;
-//            case R.id.resetBtn:
-//                mHeartbeat.stop();
-//                mHeartbeat = new Heartbeat();
-//                mMediaPlayer.stop();
-//                mServerIP.setText(getString(R.string.default_server_ip));
-//                mServerPort.setText(getString(R.string.default_server_port));
-//                break;
-//        }
-    }
-
-    @Override
-    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        Log.i("FileList", "click file " + position);
-        if (mMediaPlayer.isPlaying()) {
-            mMediaPlayer.stop();
-        }
-        String src = null;
-        if (position != 0) {
-            src = dataHolder.getInfo().getFiles().get(position - 1);
-        }
-        WsRequest req = new WsRequest("SEND", dataHolder.getInfo().getHost(), src, itoa(addr), 9000);
+    private void sendRequest(WsRequest req) {
         dataHolder.getWs().send(gson.toJson(req));
         Log.i("PLAY", "send request: " + gson.toJson(req));
         try {
@@ -178,6 +148,39 @@ public class PlayActivity extends AppCompatActivity implements OnClickListener, 
             Log.e("PLAY", "play error: " + e.getMessage());
             Toast.makeText(PlayActivity.this, "播放失败", Toast.LENGTH_LONG).show();
         }
+    }
+
+    @Override
+    public void onClick(View v) {
+        WsRequest req;
+        switch (v.getId()) {
+            case R.id.realtime_video:
+                if (mMediaPlayer.isPlaying()) {
+                    mMediaPlayer.stop();
+                }
+                req = new WsRequest("SEND", dataHolder.getInfo().getHost(), null, itoa(addr), 9000);
+                sendRequest(req);
+                break;
+            case R.id.stop_video:
+                req = new WsRequest("STOP", dataHolder.getInfo().getHost(), null, itoa(addr), 9000);
+                dataHolder.getWs().send(gson.toJson(req));
+                Log.i("PLAY", "send request: " + gson.toJson(req));
+                if (mMediaPlayer.isPlaying()) {
+                    mMediaPlayer.stop();
+                }
+                break;
+        }
+    }
+
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        Log.i("FileList", "click file " + position);
+        if (mMediaPlayer.isPlaying()) {
+            mMediaPlayer.stop();
+        }
+        String src = dataHolder.getInfo().getFiles().get(position);
+        WsRequest req = new WsRequest("SEND", dataHolder.getInfo().getHost(), src, itoa(addr), 9000);
+        sendRequest(req);
     }
 
     private String itoa(int addr) {

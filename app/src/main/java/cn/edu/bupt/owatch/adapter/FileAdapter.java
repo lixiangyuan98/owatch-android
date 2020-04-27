@@ -22,9 +22,7 @@ public class FileAdapter extends BaseAdapter {
     }
 
     public FileAdapter(Context context, List<String> files) {
-        this.files = new ArrayList<>();
-        this.files.add("实时视频");
-        this.files.addAll(files);
+        this.files = files;
         this.context = context;
     }
 

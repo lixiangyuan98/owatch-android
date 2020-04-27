@@ -111,13 +111,24 @@
 
         </FrameLayout>
 
+        <CheckBox
+            android:id="@+id/remember"
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:layout_below="@id/password_layout"
+            android:gravity="center"
+            android:layout_marginTop="32dp"
+            android:layout_marginStart="120dp"
+            android:layout_marginEnd="120dp"
+            android:text="记住我"/>
+
         <Button
             android:id="@+id/login_button"
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:background="@color/colorAccent"
-            android:layout_below="@id/password_layout"
-            android:layout_marginTop="36dp"
+            android:layout_below="@id/remember"
+            android:layout_marginTop="12dp"
             android:gravity="center"
             android:layout_marginStart="120dp"
             android:layout_marginEnd="120dp"

@@ -1,7 +1,7 @@
 package cn.edu.bupt.owatch;
 
 import android.content.Intent;
-import android.net.TrafficStats;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
@@ -38,6 +39,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private InfoAdapter adapter;
     private Handler uiHandler = new Handler(new UIHandler());
     private DataHolder dataHolder;
+
+    private EditText usernameText;
+    private EditText passwordText;
+    private SharedPreferences sharedPreferences;
+    private CheckBox rememberMeCheck;
+
 
     class UIHandler implements Handler.Callback, AdapterView.OnItemClickListener {
         @Override
@@ -91,8 +98,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Button loginBtn = findViewById(R.id.login_button);
         loginBtn.setOnClickListener(this);
 
+        usernameText = findViewById(R.id.username_input);
+        passwordText = findViewById(R.id.password_input);
+        rememberMeCheck = findViewById(R.id.remember);
+        sharedPreferences = getApplicationContext().getSharedPreferences("pref", MODE_PRIVATE);
+        if (sharedPreferences.getBoolean("checked", false)) {
+            usernameText.setText(sharedPreferences.getString("username", ""));
+            passwordText.setText(sharedPreferences.getString("password", ""));
+            rememberMeCheck.setChecked(true);
+        }
         client = new OkHttpClient.Builder().build();
-        dataHolder = (DataHolder)getApplication();
+        dataHolder = (DataHolder) getApplication();
     }
 
     @Override
@@ -100,8 +116,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (v.getId() == R.id.login_button) {
             EditText serverText = findViewById(R.id.server_input);
             EditText portText = findViewById(R.id.port_input);
-            EditText usernameText = findViewById(R.id.username_input);
-            EditText passwordText = findViewById(R.id.password_input);
 
             String server = serverText.getText().toString();
             if (server.equals("")) {
@@ -123,6 +137,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 showToast("密码不能为空");
                 return;
             }
+
+            // 保存用户名和密码
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            if (rememberMeCheck.isChecked()) {
+                editor.putBoolean("checked", true);
+                editor.putString("username", username);
+                editor.putString("password", password);
+            } else {
+                editor.clear();
+            }
+            editor.apply();
 
             Request req = new Request.Builder()
                     .header("username", username)
