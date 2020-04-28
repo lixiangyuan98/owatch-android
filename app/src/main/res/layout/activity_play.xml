@@ -45,6 +45,36 @@
             android:backgroundTint="#ff0000"/>
     </FrameLayout>
 
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="280dp">
+
+        <org.videolan.libvlc.util.VLCVideoLayout
+            android:id="@+id/file_video_layout"
+            android:layout_width="match_parent"
+            android:layout_height="240dp"
+            android:fitsSystemWindows="false" />
+
+        <Button
+            android:layout_gravity="start"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="历史视频"
+            android:layout_marginStart="100dp"
+            android:layout_marginTop="240dp"
+            android:enabled="false"/>
+
+        <Button
+            android:id="@+id/stop_file_video"
+            android:layout_gravity="end"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="停止"
+            android:layout_marginEnd="100dp"
+            android:layout_marginTop="240dp"
+            android:backgroundTint="#ff0000"/>
+    </FrameLayout>
+
     <ListView
         android:id="@+id/file_list"
         android:layout_width="match_parent"

@@ -36,15 +36,19 @@ public class PlayActivity extends AppCompatActivity implements OnClickListener, 
     private static final boolean USE_TEXTURE_VIEW = false;
     private static final boolean ENABLE_SUBTITLES = true;
     private static final String ASSET_FILENAME = "play.sdp";
+    private static final String FILE_FILENAME = "file.sdp";
     private Gson gson;
 
     private VLCVideoLayout mVideoLayout = null;
+    private VLCVideoLayout mFileLayout = null;
     private TextView speedText;
     private Integer addr;
     private ListView fileList;
 
     private LibVLC mLibVLC = null;
     private MediaPlayer mMediaPlayer = null;
+    private LibVLC mLibVLCFile = null;
+    private MediaPlayer mMediaPlayerFile = null;
     private DataHolder dataHolder = null;
 
     private Handler speedHandler;
@@ -63,8 +67,11 @@ public class PlayActivity extends AppCompatActivity implements OnClickListener, 
         args.add("-vvv");
         mLibVLC = new LibVLC(this, args);
         mMediaPlayer = new MediaPlayer(mLibVLC);
+        mLibVLCFile = new LibVLC(this, args);
+        mMediaPlayerFile = new MediaPlayer(mLibVLC);
 
         mVideoLayout = findViewById(R.id.video_layout);
+        mFileLayout = findViewById(R.id.file_video_layout);
         speedText = findViewById(R.id.speedText);
 
         speedHandler = new Handler() {
@@ -108,23 +115,21 @@ public class PlayActivity extends AppCompatActivity implements OnClickListener, 
     @Override
     protected void onStart() {
         super.onStart();
-        mMediaPlayer.attachViews(mVideoLayout, null, ENABLE_SUBTITLES, USE_TEXTURE_VIEW);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
         WifiManager wm = (WifiManager) getSystemService(WIFI_SERVICE);
         addr = 0;
         if (wm != null) {
             addr = wm.getConnectionInfo().getIpAddress();
         }
+        mMediaPlayer.attachViews(mVideoLayout, null, ENABLE_SUBTITLES, USE_TEXTURE_VIEW);
+        mMediaPlayerFile.attachViews(mFileLayout, null, ENABLE_SUBTITLES, USE_TEXTURE_VIEW);
+        sendVideoRequest();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
         mMediaPlayer.detachViews();
+        mMediaPlayerFile.detachViews();
     }
 
     @Override
@@ -133,10 +138,14 @@ public class PlayActivity extends AppCompatActivity implements OnClickListener, 
         mMediaPlayer.stop();
         mMediaPlayer.release();
         mLibVLC.release();
+        mMediaPlayerFile.stop();
+        mMediaPlayerFile.release();
+        mLibVLCFile.release();
         speedHandler.removeCallbacks(speedCountRunnable);
     }
 
-    private void sendRequest(WsRequest req) {
+    private void sendVideoRequest() {
+        WsRequest req = new WsRequest("SEND", dataHolder.getInfo().getHost(), null, itoa(addr), 9000);
         dataHolder.getWs().send(gson.toJson(req));
         Log.i("PLAY", "send request: " + gson.toJson(req));
         try {
@@ -150,17 +159,32 @@ public class PlayActivity extends AppCompatActivity implements OnClickListener, 
         }
     }
 
+    private void sendFileRequest(WsRequest req) {
+        dataHolder.getWs().send(gson.toJson(req));
+        Log.i("PLAY", "send request: " + gson.toJson(req));
+        try {
+            final Media media = new Media(mLibVLC, getAssets().openFd(FILE_FILENAME));
+            mMediaPlayerFile.setMedia(media);
+            media.release();
+            mMediaPlayerFile.play();
+        } catch (IOException e) {
+            Log.e("PLAY", "play error: " + e.getMessage());
+            Toast.makeText(PlayActivity.this, "播放失败", Toast.LENGTH_LONG).show();
+        }
+    }
+
     @Override
     public void onClick(View v) {
         WsRequest req;
         switch (v.getId()) {
+            // 播放实时视频
             case R.id.realtime_video:
                 if (mMediaPlayer.isPlaying()) {
                     mMediaPlayer.stop();
                 }
-                req = new WsRequest("SEND", dataHolder.getInfo().getHost(), null, itoa(addr), 9000);
-                sendRequest(req);
+                sendVideoRequest();
                 break;
+            // 停止实时视频
             case R.id.stop_video:
                 req = new WsRequest("STOP", dataHolder.getInfo().getHost(), null, itoa(addr), 9000);
                 dataHolder.getWs().send(gson.toJson(req));
@@ -169,18 +193,27 @@ public class PlayActivity extends AppCompatActivity implements OnClickListener, 
                     mMediaPlayer.stop();
                 }
                 break;
+            // 停止文件
+            case R.id.stop_file_video:
+                req = new WsRequest("STOP", dataHolder.getInfo().getHost(), null, itoa(addr), 9002);
+                dataHolder.getWs().send(gson.toJson(req));
+                Log.i("PLAY", "send request: " + gson.toJson(req));
+                if (mMediaPlayerFile.isPlaying()) {
+                    mMediaPlayerFile.stop();
+                }
+                break;
         }
     }
 
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         Log.i("FileList", "click file " + position);
-        if (mMediaPlayer.isPlaying()) {
-            mMediaPlayer.stop();
+        if (mMediaPlayerFile.isPlaying()) {
+            mMediaPlayerFile.stop();
         }
         String src = dataHolder.getInfo().getFiles().get(position);
-        WsRequest req = new WsRequest("SEND", dataHolder.getInfo().getHost(), src, itoa(addr), 9000);
-        sendRequest(req);
+        WsRequest req = new WsRequest("SEND", dataHolder.getInfo().getHost(), src, itoa(addr), 9002);
+        sendFileRequest(req);
     }
 
     private String itoa(int addr) {
